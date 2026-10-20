@@ -1,0 +1,12 @@
+@media(max-width:640px){
+  .map-first-challenge main{padding-bottom:150px}
+  .map-first-challenge .play-area{position:fixed;left:12px;right:12px;bottom:0;z-index:45;margin:0;padding:10px 12px max(10px,env(safe-area-inset-bottom));background:#fff;border:1px solid #d5dfcf;border-radius:12px 12px 0 0;box-shadow:0 -5px 25px #2f4f3210}
+  .map-first-challenge .fill-prompt{display:none}
+  .map-first-challenge .answer-form{position:static;margin:0;box-shadow:none}
+  .map-first-challenge .feedback{margin:8px 0 0;padding:5px 8px;font-size:12px}
+  .map-first-challenge .end-button{font-size:11px;margin:6px auto 0;padding:3px}
+  .challenge-map .atlas-attribution{padding:8px 10px;gap:4px}
+  .challenge-map .atlas-attribution p,.challenge-map .atlas-attribution span{font-size:9px;line-height:1.5}
+  .challenge-map .atlas-controls{max-width:100%;overflow:auto;flex-wrap:nowrap!important}
+  .challenge-map .atlas-controls button{flex-shrink:0}
+}

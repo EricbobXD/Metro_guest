@@ -10,11 +10,79 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import App from '../src/App.jsx';
 import userEvent from '@testing-library/user-event';
 
-it('remembers the introduction and exposes update coverage information',()=>{
-  const {unmount}=render(<App/>);
-  expect(document.querySelector('.practice-intro').open).toBe(true);unmount();
-  render(<App/>);expect(document.querySelector('.practice-intro').open).toBe(false);
-  expect(screen.getByText('資料更新：2026-10-20')).toBeTruthy();
+it('offers compact setup with a single start action and keyboard-closeable sidebar',()=>{
+ render(<App/>);
+ expect(screen.getByRole('combobox',{name:'挑戰路網'})).toBeTruthy();
+ expect(screen.getByRole('combobox',{name:'挑戰模式'})).toBeTruthy();
+ expect(screen.getAllByRole('button',{name:'開始練習'})).toHaveLength(1);
+ expect(document.querySelector('.hero')).toBeNull();
+ fireEvent.keyDown(document,{key:'Escape'});
+ expect(screen.queryByRole('tablist')).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'開啟或收合選單'}));
+ expect(screen.getByRole('tablist')).toBeTruthy();
+});
+
+for(const id of ['north','tra','kaohsiung'])it(`${id} shortest-route reference hides station names and marks both endpoints`,()=>{
+ vi.spyOn(Math,'random').mockReturnValue(.2);
+ render(<App/>);chooseNetwork(id);chooseMode('route');click('開始練習');
+ const reference=screen.getByRole('region',{name:'挑戰路網'});
+ expect(reference.querySelectorAll('[data-route-endpoint]')).toHaveLength(2);
+ expect(screen.queryByRole('tablist')).toBeNull();
+ expect(reference.querySelector('[data-map-source]')).toBeNull();
+ expect(reference.querySelector('.atlas-attribution')).toBeNull();
+ for(const label of reference.querySelectorAll('.atlas-name,.tra-vertical-name'))expect(['＿＿＿＿','？',''].includes(label.textContent)).toBe(true);
+ expect(within(reference).queryByRole('button',{name:'圖例',exact:true})).toBeNull();
+ if(id==='tra')expect(reference.querySelectorAll('title')).toHaveLength(0);
+ else for(const title of reference.querySelectorAll('.atlas-stop title'))expect(title.textContent).toMatch(/^[A-Za-z0-9 /]*$/);
+ vi.restoreAllMocks();
+});
+
+it('places rail jumps inside the sidebar and opens both legend sections together',()=>{
+ render(<App/>);fireEvent.click(screen.getByRole('tab',{name:'路網一覽'}));
+ fireEvent.change(screen.getByRole('combobox',{name:'鐵路系統'}),{target:{value:'tra'}});
+ const sidebar=document.getElementById('site-menu');
+ expect(within(sidebar).getByRole('navigation',{name:'路線快速跳轉'})).toBeTruthy();
+ expect(document.querySelector('#routes .rail-jump')).toBeNull();
+ const legend=document.querySelector('.tra-combined-legend');
+ expect(legend.querySelectorAll('details')).toHaveLength(0);
+ expect(within(legend).getByText('轉乘路線')).toBeTruthy();
+ expect(within(legend).getByText('台鐵路線')).toBeTruthy();
+ expect(screen.queryByRole('checkbox',{name:'顯示高鐵'})).toBeNull();
+ expect(document.querySelector('.tra-hsr-layer').getAttribute('opacity')).toBe('0.5');
+ expect(document.querySelector('.tra-hsr-note')).toBeNull();
+});
+
+it('blocks hash navigation to revealed maps during a running challenge',()=>{
+ render(<App/>);click('開始練習');enter('淡水');
+ act(()=>{window.history.pushState(null,'','#routes');window.dispatchEvent(new Event('hashchange'));});
+ expect(screen.queryByRole('tabpanel',{name:'路網一覽'})).toBeNull();
+ expect(screen.getByRole('textbox',{name:'車站答案'})).toBeTruthy();
+ expect(screen.queryByRole('tablist')).toBeNull();
+ expect(screen.getByRole('progressbar',{name:'淡水信義線完成進度'}).value).toBe(1);
+});
+
+it('shows HSR overview vertically and keeps the detailed poster for a selected line',()=>{
+ render(<App/>);click(/高鐵.*西部高速鐵路/);
+ fireEvent.click(screen.getByRole('tab',{name:'路網一覽'}));
+ const overview=screen.getByRole('region',{name:'高鐵直式全路網'});
+ expect(within(overview).getAllByRole('listitem')).toHaveLength(12);
+ expect(within(overview).getAllByRole('listitem')[0].textContent).toContain('南港');
+ expect(within(overview).getAllByRole('listitem')[11].textContent).toContain('左營');
+ expect(document.querySelector('.single-route-poster')).toBeNull();
+ fireEvent.change(screen.getByLabelText('路網範圍'),{target:{value:routeGroups(networks.find(n=>n.id==='hsr'))[0].id}});
+ expect(screen.queryByRole('region',{name:'高鐵直式全路網'})).toBeNull();
+ expect(document.querySelector('.single-route-poster')).toBeTruthy();
+});
+
+it('keeps setup compact and puts secondary information in the sidebar',()=>{
+ render(<App/>);expect(document.querySelector('.practice-intro')).toBeNull();
+ expect(screen.getAllByRole('button',{name:'開始練習'})).toHaveLength(1);
+ expect(document.querySelector('#site-menu').textContent).toContain('資料更新：2026-10-20');
+ expect(document.querySelector('.site-footer .version-info')).toBeNull();
+ expect(document.querySelector('.menu-glyph')).toBeNull();
+ expect(screen.getByText('關於我們',{exact:true})).toBeTruthy();
+ expect(screen.getByText('回饋',{exact:true})).toBeTruthy();
+ expect(document.querySelector('.site-header .version-info')).toBeNull();
 });
 it('focuses on play and retries only unanswered fill stations with separate records',()=>{
   render(<App/>);click(/高鐵.*西部高速鐵路/);click(/^開始練習/);
@@ -47,14 +115,14 @@ it('uses global transfers in a single scope and warns when only one question is 
   expect(screen.getByText(/可出題 1 站：僅一題/)).toBeTruthy();
   expect(screen.getByRole('button',{name:/開始練習/}).disabled).toBe(false);
 });
-it('disables both entry buttons when the selected network has no transfer questions',()=>{
+it('disables the sole start button when the selected network has no transfer questions',()=>{
   const line=networks.find(n=>n.id==='hsr').lines[0],original=line.stops;
   try{
     line.stops=['彰化','雲林','嘉義'];
     render(<App/>);click(/高鐵.*西部高速鐵路/);click(/轉乘資訊挑戰/);
     expect(screen.getByText(/可出題 0 站：此範圍無轉乘題/)).toBeTruthy();
     expect(screen.getByRole('button',{name:/開始練習/}).disabled).toBe(true);
-    expect(screen.getByRole('button',{name:/準備好了，出發/}).disabled).toBe(true);
+    expect(screen.getAllByRole('button',{name:/開始練習/})).toHaveLength(1);
   }finally{cleanup();line.stops=original;}
 });
 it('resets unavailable subtitles when switching scope and never offers freight route endpoints',()=>{
@@ -79,8 +147,9 @@ it('route questions are generated by the system and cannot be customized',()=>{
 });
 it('running TRA fill hides HSR names, shared-section notes and tooltips, restoring them afterwards',()=>{
   const {container,rerender}=render(<TraOverview subtitle={false} game={{status:'running',mode:'fill',answers:{}}} onSelect={()=>{}}/>);
-  expect(container.querySelector('.tra-hsr-layer')).toBeNull();
-  expect(container.querySelector('.tra-hsr-connections')).toBeNull();
+  expect(container.querySelector('.tra-hsr-layer').getAttribute('opacity')).toBe('0.5');
+  expect(container.querySelector('.tra-hsr-layer').textContent).not.toContain('高鐵南港');
+  expect(container.querySelector('.tra-hsr-connections').getAttribute('opacity')).toBe('0.5');
   expect(container.querySelector('.tra-hsinchu-shared')).toBeNull();
   expect(container.querySelectorAll('title')).toHaveLength(0);
   expect(container.querySelector('[data-station="南港"] .tra-vertical-name').textContent).toBe('？');
@@ -103,10 +172,11 @@ it('renews the HSR map as a twelve-stop poster with reversible termini and answe
   expect(select).toHaveBeenCalledWith('南港');
 });
 
-it('toggles a separate HSR layer without changing TRA stations or quiz targets',()=>{
+it('always shows a 50-percent HSR layer without changing TRA quiz targets',()=>{
   const {container}=render(<TraOverview subtitle={false} onSelect={()=>{}}/>);
   const count=container.querySelectorAll('[data-station]').length;
-  expect(screen.getByRole('checkbox',{name:'顯示高鐵'}).checked).toBe(true);
+  expect(screen.queryByRole('checkbox',{name:'顯示高鐵'})).toBeNull();
+  expect(container.querySelector('.tra-hsr-layer').getAttribute('opacity')).toBe('0.5');
   expect(container.querySelectorAll('[data-hsr-station]').length).toBe(12);
   expect(container.querySelectorAll('[data-hsr-transfer]').length).toBe(8);
   expect(container.querySelector('[data-hsr-transfer="豐富"]').getAttribute('data-transfer-type')).toBe('walking');
@@ -116,13 +186,23 @@ it('toggles a separate HSR layer without changing TRA stations or quiz targets',
   expect(container.querySelector('[data-hsr-transfer="南港"]').getAttribute('stroke-dasharray')).toBeNull();
   expect(container.querySelectorAll('[data-station]').length).toBe(count);
   expect(container.querySelector('[data-hsr-station="桃園"] [role="button"]')).toBeNull();
-  fireEvent.click(screen.getByRole('checkbox',{name:'顯示高鐵'}));
-  expect(container.querySelectorAll('[data-hsr-station]').length).toBe(0);
+  expect(container.querySelectorAll('[data-hsr-station]').length).toBe(12);
 });
 
 beforeEach(()=>{localStorage.clear();window.history.replaceState(null,'','/');});
 afterEach(()=>{cleanup();vi.useRealTimers();});
-const click=label=>fireEvent.click(screen.getByRole('button',{name:label}));
+const chooseNetwork=id=>fireEvent.change(screen.queryByRole('combobox',{name:'挑戰路網'})||screen.getByRole('combobox',{name:'鐵路系統'}),{target:{value:id}});
+const chooseMode=id=>fireEvent.change(screen.getByRole('combobox',{name:'挑戰模式'}),{target:{value:id}});
+const click=label=>{
+ const matches=text=>label instanceof RegExp?label.test(text):label===text;
+ const descriptions={tra:'環島鐵路',hsr:'西部高速鐵路',north:'捷運・輕軌',taichung:'捷運・輕軌',kaohsiung:'捷運・輕軌'};
+ const network=networks.find(n=>matches(n.name+' '+descriptions[n.id]));
+ if(network)return chooseNetwork(network.id);
+ const mode=[['fill','全圖限時填空'],['route','最少站數挑戰'],['transfer','轉乘資訊挑戰']].find(([id,name])=>matches(name));
+ if(mode&&screen.queryByRole('combobox',{name:'挑戰模式'}))return chooseMode(mode[0]);
+ return fireEvent.click(screen.getByRole('button',{name:label}));
+};
+const svgAttribution=()=>document.querySelector('.site-footer').textContent;
 const enter=value=>{fireEvent.change(screen.getByRole('textbox',{name:'車站答案'}),{target:{value}});click(/送出/);};
 describe('practice flows',()=>{
   it('marks transfer junctions without black center dots or click-through transfer cards',()=>{
@@ -157,8 +237,8 @@ describe('practice flows',()=>{
     expect(screen.getByRole('group',{name:'雙北＋桃園整合簡易路網圖'})).toBeTruthy();
     expect(screen.getByRole('button',{name:'市中心'}).getAttribute('aria-pressed')).toBe('false');
     expect(screen.getByLabelText('路網縮放比例').textContent).toBe('450%');
-    expect(screen.getByText('參考自臺北捷運官方路網圖（臺北大眾捷運股份有限公司）')).toBeTruthy();
-    expect(screen.getByText('非官方版本')).toBeTruthy();
+    expect(svgAttribution()).toContain('非官方示意');
+    expect(document.querySelector('[data-map-source]')).toBeNull();
     expect(screen.getByRole('link',{name:'下載 SVG'}).getAttribute('href')).toBe('/maps/north-relative.svg');
     click('全圖');
     expect(screen.getByLabelText('路網縮放比例').textContent).toBe('100%');
@@ -208,31 +288,29 @@ describe('practice flows',()=>{
     expect(screen.getByRole('button',{name:/淡海輕軌第 \d+ 站 崁頂/})).toBeTruthy();
     expect(screen.getByRole('button',{name:/淡海輕軌第 \d+ 站 淡水漁人碼頭/})).toBeTruthy();
     fireEvent.click(screen.getByRole('tab',{name:'挑戰練習'}));click(/^開始練習/);
-    enter('崁頂');expect(screen.getByRole('status').textContent).toContain('答對了');
-    enter('淡水漁人碼頭');expect(screen.getByRole('status').textContent).toContain('答對了');
+    enter('崁頂');expect(screen.getByRole('status',{name:'作答回饋'}).textContent).toContain('答對了');
+    enter('淡水漁人碼頭');expect(screen.getByRole('status',{name:'作答回饋'}).textContent).toContain('答對了');
   });
-  it('separates challenge and route tabs while preserving an active answer',()=>{
-    render(<App/>);click(/^開始練習/);enter('淡水');
-    fireEvent.click(screen.getByRole('tab',{name:'路網一覽'}));
-    expect(screen.queryByRole('textbox',{name:'車站答案'})).toBeNull();
-    expect(screen.getByRole('tabpanel',{name:'路網一覽'})).toBeTruthy();
-    expect(screen.getByRole('button',{name:'淡水信義線第 28 站 淡水'})).toBeTruthy();
-    expect(screen.queryByLabelText('車站轉乘資訊')).toBeNull();
-    fireEvent.click(screen.getByRole('tab',{name:/挑戰練習/}));
-    expect(screen.getByRole('textbox',{name:'車站答案'})).toBeTruthy();
-    expect(screen.getByRole('status').textContent).toContain('答對了！淡水');
-    expect(screen.queryByRole('button',{name:'淡水信義線第 28 站 淡水'})).toBeNull();
-    expect(screen.getByRole('button',{name:'結束本次練習'})).toBeTruthy();
-  });
+  it('keeps active challenges in focus with inline maps and no navigation',()=>{
+ render(<App/>);click(/^開始練習/);enter('淡水');
+ expect(screen.queryByRole('tablist')).toBeNull();
+ expect(document.querySelector('.site-header .version-info')).toBeNull();
+ expect(within(screen.getByRole('region',{name:'各線完成進度'})).getByRole('progressbar',{name:'淡水信義線完成進度'}).value).toBe(1);
+ const map=screen.getByRole('region',{name:'挑戰路網'});
+ expect(within(map).queryByText('ROUTE ENDPOINTS')).toBeNull();
+ fireEvent.click(within(map).getByRole('button',{name:'淡水信義線第 27 站 空格'}));
+ expect(screen.getByText('填入所選位置的站名')).toBeTruthy();
+ expect(document.querySelector('.challenge-station-selected')).toBeTruthy();
+ });
   it('lets the player answer successive HSR questions without auto-submission',async()=>{
     const user=userEvent.setup();vi.spyOn(Math,'random').mockReturnValue(0);
-    render(<App/>);await user.click(screen.getByRole('button',{name:/高鐵.*西部高速鐵路/}));
-    await user.click(screen.getByRole('button',{name:/轉乘資訊挑戰/}));await user.click(screen.getByRole('button',{name:'開始練習',exact:true}));
+    render(<App/>);chooseNetwork('hsr');
+    chooseMode('transfer');await user.click(screen.getByRole('button',{name:'開始練習',exact:true}));
     for(const labels of [['台鐵・南港','板南線・南港'],['台鐵・臺北','淡水信義線・台北車站','板南線・台北車站','桃園機場捷運・台北車站'],['台鐵・南港','板南線・南港']]){
       const form=screen.getByRole('button',{name:'確認答案'}).closest('form');
       for(const label of labels)await user.click(within(form).getByLabelText(label));
       await user.click(screen.getByRole('button',{name:'確認答案'}));
-      expect(screen.getByRole('status').textContent).toContain('全部答對');
+      expect(screen.getByRole('status',{name:'作答回饋'}).textContent).toContain('全部答對');
       await user.click(screen.getByRole('button',{name:/下一題/}));
       expect(screen.queryByRole('status')).toBeNull();
       expect(screen.getByRole('button',{name:'確認答案'})).toBeTruthy();
@@ -242,8 +320,8 @@ describe('practice flows',()=>{
   });
   it('accepts station answers, prevents duplicates and saves a finished run',()=>{
     render(<App/>);click(/高鐵.*西部高速鐵路/);click(/^開始練習/);
-    enter('臺北');expect(screen.getByRole('status').textContent).toContain('答對了！台北');
-    enter('台北');expect(screen.getByRole('status').textContent).toContain('這一站已經填過了，試試下一站。');
+    enter('臺北');expect(screen.getByRole('status',{name:'作答回饋'}).textContent).toContain('答對了！台北');
+    enter('台北');expect(screen.getByRole('status',{name:'作答回饋'}).textContent).toContain('這一站已經填過了，試試下一站。');
     click('結束本次練習');
     const records=JSON.parse(localStorage.getItem('rail-sprint-records'));
     expect(records).toHaveLength(1);expect(records[0].score).toBe(1);expect(records[0].total).toBe(12);
@@ -253,8 +331,8 @@ describe('practice flows',()=>{
     expect(screen.getByLabelText('站名').checked).toBe(true);
     expect(screen.getByLabelText('站名＋副站名').matches(':disabled')).toBe(true);
     expect(screen.getByLabelText('挑戰時間').value).toBe('60');
-    expect(screen.getByRole('button',{name:/最少站數挑戰/}).disabled).toBe(true);
-    expect(screen.getByRole('button',{name:/轉乘資訊挑戰/}).disabled).toBe(false);
+    expect(screen.getByRole('option',{name:/最少站數挑戰/}).disabled).toBe(true);
+    expect(screen.getByRole('option',{name:/轉乘資訊挑戰/}).disabled).toBe(false);
     click(/^開始練習/);
     ['南港','台北','板橋','桃園','新竹','苗栗','台中','彰化','雲林','嘉義','台南','左營'].forEach(enter);
     expect(screen.getByText('漂亮到站，挑戰完成！')).toBeTruthy();
@@ -262,8 +340,8 @@ describe('practice flows',()=>{
   });
   it('requires subtitles when selected and accepts the user-defined temple subtitle',()=>{
     render(<App/>);fireEvent.click(screen.getByLabelText('站名＋副站名'));click(/^開始練習/);
-    enter('廣慈/奉天宮');expect(screen.getByRole('status').textContent).toContain('找不到這個答案，請確認站名與副站名。');
-    enter('廣慈/奉天宮 | 松山慈惠堂');expect(screen.getByRole('status').textContent).toContain('答對了！廣慈/奉天宮 | 松山慈惠堂');
+    enter('廣慈/奉天宮');expect(screen.getByRole('status',{name:'作答回饋'}).textContent).toContain('找不到這個答案，請確認站名與副站名。');
+    enter('廣慈/奉天宮 | 松山慈惠堂');expect(screen.getByRole('status',{name:'作答回饋'}).textContent).toContain('答對了！廣慈/奉天宮 | 松山慈惠堂');
   });
   it('enforces the next intermediate stop and excludes route endpoints',()=>{
     vi.spyOn(Math,'random').mockReturnValue(0);
@@ -285,7 +363,7 @@ describe('practice flows',()=>{
     vi.spyOn(Math,'random').mockReturnValue(0);render(<App/>);click(/台中.*捷運・輕軌/);click(/轉乘資訊挑戰/);click(/^開始練習/);
     const form=screen.getByRole('button',{name:'確認答案'}).closest('form');
     fireEvent.click(within(form).getByLabelText('綠線'));fireEvent.click(within(form).getByLabelText('台鐵'));click('確認答案');
-    expect(screen.getByRole('status').textContent).toContain('全部答對！準備前往下一站。');click(/下一題/);
+    expect(screen.getByRole('status',{name:'作答回饋'}).textContent).toContain('全部答對！準備前往下一站。');click(/下一題/);
     expect(screen.getByRole('button',{name:'確認答案'})).toBeTruthy();vi.restoreAllMocks();
   });
 });
@@ -327,16 +405,16 @@ it('Kaohsiung airport icon follows its station name on the same line',()=>{const
 
 it('independent legend remains readable when map zoom changes',()=>{render(<App/>);fireEvent.click(screen.getByRole('tab',{name:'路網一覽'}));const legend=screen.getByRole('img',{name:'路線與符號圖例'}),before=legend.getAttribute('viewBox'),map=screen.getByRole('group',{name:'雙北＋桃園整合簡易路網圖'});expect(map.querySelector('[data-map-legend]')).toBeNull();click('全圖');click('放大路網');expect(legend.getAttribute('viewBox')).toBe(before);click('閱讀視野');expect(screen.getByLabelText('路網縮放比例').textContent).toBe('450%');});
 
-it('routes page has one navigation and unified system, scope and map controls',()=>{render(<App/>);expect(document.querySelector('.hero')).toBeTruthy();fireEvent.click(screen.getByRole('tab',{name:'路網一覽'}));expect(document.querySelector('.hero')).toBeNull();expect(screen.getAllByRole('tablist')).toHaveLength(1);const tools=document.querySelector('.route-sticky-tools');expect(within(tools).getByRole('combobox',{name:'鐵路系統'})).toBeTruthy();expect(within(tools).getByRole('button',{name:'全圖'})).toBeTruthy();expect(within(tools).getByRole('button',{name:'閱讀視野'})).toBeTruthy();fireEvent.click(within(tools).getByRole('button',{name:'圖例',exact:true}));expect(document.querySelector('.north-independent-legend').open).toBe(true);fireEvent.change(within(tools).getByRole('combobox',{name:'鐵路系統'}),{target:{value:'taichung'}});expect(screen.getByLabelText('目前路網').textContent).toBe('台中・全路網');expect(within(tools).getByRole('button',{name:'全圖'})).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'展開路網'}));expect(document.querySelector('.atlas-expanded .atlas-toolbar')).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'縮回路網'}));expect(document.querySelector('.atlas-expanded')).toBeNull();});
+it('routes page has one navigation and unified system, scope and map controls',()=>{render(<App/>);expect(document.querySelector('.hero')).toBeNull();fireEvent.click(screen.getByRole('tab',{name:'路網一覽'}));expect(document.querySelector('.hero')).toBeNull();expect(screen.getAllByRole('tablist')).toHaveLength(1);const tools=document.querySelector('.route-sticky-tools');expect(within(tools).getByRole('combobox',{name:'鐵路系統'})).toBeTruthy();expect(within(tools).getByRole('button',{name:'全圖'})).toBeTruthy();expect(within(tools).getByRole('button',{name:'閱讀視野'})).toBeTruthy();fireEvent.click(within(tools).getByRole('button',{name:'圖例',exact:true}));expect(document.querySelector('.north-independent-legend').open).toBe(true);fireEvent.change(within(tools).getByRole('combobox',{name:'鐵路系統'}),{target:{value:'taichung'}});expect(screen.getByRole('combobox',{name:'鐵路系統'}).value).toBe('taichung');expect(within(tools).getByRole('button',{name:'全圖'})).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'展開路網'}));expect(document.querySelector('.atlas-expanded .atlas-toolbar')).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'縮回路網'}));expect(document.querySelector('.atlas-expanded')).toBeNull();});
 
-it('offers only 30/60 seconds for HSR and 10/25/30 minutes elsewhere with valid switching',()=>{render(<App/>);const duration=screen.getByLabelText('挑戰時間');expect([...duration.options].map(o=>o.value)).toEqual(['600','1500','1800']);fireEvent.change(duration,{target:{value:'600'}});expect(screen.getByText('10:00')).toBeTruthy();click(/高鐵.*西部高速鐵路/);expect([...duration.options].map(o=>o.value)).toEqual(['30','60']);expect(duration.value).toBe('60');fireEvent.change(duration,{target:{value:'30'}});expect(screen.getByText('00:30')).toBeTruthy();click(/台中.*捷運・輕軌/);expect(duration.value).toBe('600');expect([...duration.options].map(o=>o.value)).toEqual(['600','1500','1800']);});
+it('offers only 30/60 seconds for HSR and 10/25/30 minutes elsewhere with valid switching',()=>{render(<App/>);const duration=screen.getByLabelText('挑戰時間');expect([...duration.options].map(o=>o.value)).toEqual(['600','1500','1800']);fireEvent.change(duration,{target:{value:'600'}});expect(duration.value).toBe('600');click(/高鐵.*西部高速鐵路/);expect([...duration.options].map(o=>o.value)).toEqual(['30','60']);expect(duration.value).toBe('60');fireEvent.change(duration,{target:{value:'30'}});expect(duration.value).toBe('30');click(/台中.*捷運・輕軌/);expect(duration.value).toBe('600');expect([...duration.options].map(o=>o.value)).toEqual(['600','1500','1800']);});
 it('uses the selected HSR 30-second deadline and records its duration',()=>{vi.useFakeTimers();render(<App/>);click(/高鐵.*西部高速鐵路/);fireEvent.change(screen.getByLabelText('挑戰時間'),{target:{value:'30'}});click(/^開始練習/);act(()=>vi.advanceTimersByTime(29000));expect(screen.queryByText('時間到，這次也更熟悉了一點。')).toBeNull();act(()=>vi.advanceTimersByTime(1000));expect(screen.getByText('時間到，這次也更熟悉了一點。')).toBeTruthy();const record=JSON.parse(localStorage.getItem('rail-sprint-records'))[0];expect(record.duration).toBe(30);expect(record.elapsed).toBe(30);});
 
-it('disables Taichung shortest-route mode and safely resets an existing route selection',()=>{render(<App/>);click(/最少站數挑戰/);expect(screen.queryByLabelText('起點')).toBeNull();click(/台中.*捷運・輕軌/);expect(screen.getByRole('button',{name:/最少站數挑戰/}).disabled).toBe(true);expect(screen.getByRole('button',{name:/全圖限時填空/}).getAttribute('aria-pressed')).toBe('true');expect(screen.queryByLabelText('起點')).toBeNull();const time=screen.getByLabelText('挑戰時間');expect([...time.options].map(o=>o.textContent)).toEqual(['10 分鐘','25 分鐘','30 分鐘']);for(const value of ['1500','1800']){fireEvent.change(time,{target:{value}});expect(time.value).toBe(value);}click(/高雄.*捷運・輕軌/);expect(screen.getByRole('button',{name:/最少站數挑戰/}).disabled).toBe(false);expect(time.value).toBe('1800');});
+it('disables Taichung shortest-route mode and safely resets an existing route selection',()=>{render(<App/>);click(/最少站數挑戰/);expect(screen.queryByLabelText('起點')).toBeNull();click(/台中.*捷運・輕軌/);expect(screen.getByRole('option',{name:/最少站數挑戰/}).disabled).toBe(true);expect(screen.getByRole('combobox',{name:'挑戰模式'}).value).toBe('fill');expect(screen.queryByLabelText('起點')).toBeNull();const time=screen.getByLabelText('挑戰時間');expect([...time.options].map(o=>o.textContent)).toEqual(['10 分鐘','25 分鐘','30 分鐘']);for(const value of ['1500','1800']){fireEvent.change(time,{target:{value}});expect(time.value).toBe(value);}click(/高雄.*捷運・輕軌/);expect(screen.getByRole('option',{name:/最少站數挑戰/}).disabled).toBe(false);expect(time.value).toBe('1800');});
 
 it('Taichung is name-only and no system offers five minutes',()=>{render(<App/>);fireEvent.click(screen.getByLabelText('站名＋副站名'));click(/台中.*捷運・輕軌/);expect(screen.getByLabelText('站名').checked).toBe(true);expect(screen.getByLabelText('站名＋副站名').matches(':disabled')).toBe(true);expect(networks.find(n=>n.id==='taichung').lines.flatMap(l=>l.stops).every(s=>!s.includes('|'))).toBe(true);for(const [pattern,values]of [[/台鐵.*環島鐵路/,['600','1500','1800']],[/高鐵.*西部高速鐵路/,['30','60']],[/雙北.*捷運/,['600','1500','1800']],[/高雄.*捷運/,['600','1500','1800']]]){click(pattern);expect([...screen.getByLabelText('挑戰時間').options].map(o=>o.value)).toEqual(values);}});
 
-it('Kaohsiung disables subtitle answers without disabling shortest-route mode',()=>{render(<App/>);fireEvent.click(screen.getByLabelText('站名＋副站名'));click(/最少站數挑戰/);click(/高雄.*捷運・輕軌/);expect(screen.getByLabelText('站名').checked).toBe(true);expect(screen.getByLabelText('站名＋副站名').matches(':disabled')).toBe(true);expect(screen.getByRole('button',{name:/最少站數挑戰/}).disabled).toBe(false);expect(screen.queryByLabelText('起點')).toBeNull();click(/雙北.*捷運/);expect(screen.getByLabelText('站名＋副站名').matches(':disabled')).toBe(false);});
+it('Kaohsiung disables subtitle answers without disabling shortest-route mode',()=>{render(<App/>);fireEvent.click(screen.getByLabelText('站名＋副站名'));click(/最少站數挑戰/);click(/高雄.*捷運・輕軌/);expect(screen.getByLabelText('站名').checked).toBe(true);expect(screen.getByLabelText('站名＋副站名').matches(':disabled')).toBe(true);expect(screen.getByRole('option',{name:/最少站數挑戰/}).disabled).toBe(false);expect(screen.queryByLabelText('起點')).toBeNull();click(/雙北.*捷運/);expect(screen.getByLabelText('站名＋副站名').matches(':disabled')).toBe(false);});
 
 it('TRA single lines use the metro poster style and preserve every station',()=>{
   const group=routeGroups(networks.find(n=>n.id==='tra')).find(g=>g.id==='tr-north');
@@ -350,15 +428,44 @@ it('TRA single lines use the metro poster style and preserve every station',()=>
   expect(container.querySelector('.strip-bottom-band').textContent).toContain('基隆');
 });
 
-it('rail route selector shows only the chosen poster',()=>{
-  render(<App/>);fireEvent.click(screen.getByRole('tab',{name:'路網一覽'}));
-  fireEvent.change(screen.getByLabelText('鐵路系統'),{target:{value:'tra'}});
-  expect(screen.getByRole('group',{name:'台鐵直式完整連接路網圖'})).toBeTruthy();
-  fireEvent.change(screen.getByLabelText('路網範圍'),{target:{value:'tr-coast'}});
-  expect(document.querySelectorAll('.single-route-poster')).toHaveLength(1);
-  expect(document.querySelectorAll('.diagram-stop')).toHaveLength(18);
-  expect(screen.queryByRole('group',{name:'台鐵直式完整連接路網圖'})).toBeNull();
-  expect(screen.queryByRole('navigation',{name:'路線快速跳轉'})).toBeNull();
+it('TRA view scopes merge trunks and branches without altering practice scope',()=>{
+ render(<App/>);chooseNetwork('tra');
+ fireEvent.change(screen.getByLabelText('練習範圍'),{target:{value:'tr-coast'}});
+ fireEvent.click(screen.getByRole('tab',{name:'路網一覽'}));
+ const scope=screen.getByLabelText('路網範圍');
+ expect([...scope.options].map(o=>o.textContent)).toEqual(['全路網','西部幹線','東部幹線','南迴線']);
+ expect(scope.value).toBe('all');fireEvent.change(scope,{target:{value:'west'}});
+ expect(document.querySelectorAll('.single-route-poster')).toHaveLength(0);
+ expect(document.querySelector('[data-station="內灣"]')).toBeTruthy();
+ expect(document.querySelector('[data-station="沙崙"]')).toBeTruthy();
+ expect(document.querySelector('[data-station="花蓮"]')).toBeNull();
+ const mountain=()=>document.querySelector('[data-edge-from="豐原"][data-edge-to="栗林"]');
+ expect(mountain().getAttribute('data-display-path-active')).toBe('true');
+ fireEvent.change(screen.getByLabelText('西部經由'),{target:{value:'coast'}});
+ expect(mountain().getAttribute('data-display-path-active')).toBe('false');
+ expect(document.querySelector('[data-edge-from="日南"][data-edge-to="大甲"]').getAttribute('data-display-path-active')).toBe('true');
+ const to=screen.getByLabelText('顯示路徑終點');
+ expect([...to.options].map(o=>o.value)).not.toContain('追分');
+ fireEvent.change(to,{target:{value:'六家'}});
+ expect(document.querySelector('[data-station="六家"]').getAttribute('opacity')).toBe('1');
+ fireEvent.click(screen.getByRole('tab',{name:'挑戰練習'}));
+ expect(screen.getByLabelText('練習範圍').value).toBe('tr-coast');
+ expect(localStorage.getItem('rail-sprint-records')).toBeNull();
+});
+
+it('eastern and south-link views expose valid endpoints and cross-trunk navigation',()=>{
+ render(<App/>);fireEvent.click(screen.getByRole('tab',{name:'路網一覽'}));
+ fireEvent.change(screen.getByLabelText('鐵路系統'),{target:{value:'tra'}});
+ fireEvent.change(screen.getByLabelText('路網範圍'),{target:{value:'east'}});
+ expect(document.querySelector('[data-station="花蓮港"]')).toBeTruthy();
+ expect(document.querySelector('[data-station="花蓮港"]').textContent).toContain('貨運站');
+ expect([...screen.getByLabelText('顯示路徑終點').options].map(o=>o.value)).toEqual(['八堵','臺東','蘇澳','八斗子','菁桐']);
+ fireEvent.change(screen.getByLabelText('顯示路徑終點'),{target:{value:'菁桐'}});
+ expect(document.querySelector('[data-station="菁桐"]').getAttribute('opacity')).toBe('1');
+ fireEvent.change(screen.getByLabelText('路網範圍'),{target:{value:'south'}});
+ expect(document.querySelectorAll('[data-station]')).toHaveLength(12);
+ fireEvent.click(screen.getByRole('button',{name:/枋寮・接西部/}));
+ expect(screen.getByLabelText('路網範圍').value).toBe('west');
 });
 
 it('TRA vertical overview joins every route and draws shared stations only once',()=>{
@@ -381,14 +488,14 @@ it('TRA sticky reading position follows the visible vertical station section',as
   const eastRow=document.querySelector('[data-station="暖暖"]');
   eastRow.getBoundingClientRect=()=>({top:120,bottom:150});
   fireEvent.scroll(window);await act(async()=>{await new Promise(resolve=>requestAnimationFrame(resolve));});
-  expect(screen.getByLabelText('目前閱讀區段').textContent).toBe('｜東部幹線／宜蘭線');
+  expect(screen.getByLabelText('目前閱讀區段').textContent).toBe('東部幹線／宜蘭線');
 });
 
 it('TRA grouped navigation jumps to anchors within the connected SVG',()=>{
   render(<App/>);fireEvent.click(screen.getByRole('tab',{name:'路網一覽'}));
   fireEvent.change(screen.getByLabelText('鐵路系統'),{target:{value:'tra'}});
   const nav=screen.getByRole('navigation',{name:'路線快速跳轉'});
-  expect([...nav.querySelectorAll('summary')].map(el=>el.textContent)).toEqual(['西部','東部','南迴','內灣／六家']);
+  expect([...nav.querySelectorAll('summary')].map(el=>el.textContent)).toEqual(['西部','東部','南迴']);
   const west=nav.querySelector('details');west.open=true;
   const scroll=vi.fn();document.getElementById('rail-route-tr-north').scrollIntoView=scroll;
   fireEvent.click(within(nav).getByRole('link',{name:'縱貫線・北段',exact:true}));
@@ -403,8 +510,8 @@ it('TRA connected map retains keyboard transfer explanations and legend',()=>{
   expect(chip.textContent).toBe('G 松山新店線');fireEvent.focus(chip);
   expect(screen.getByRole('tooltip').textContent).toBe('松山新店線');
   fireEvent.keyDown(chip,{key:'Escape'});expect(screen.queryByRole('tooltip')).toBeNull();
-  const legend=document.querySelector('.rail-transfer-legend');
-  expect(legend.open).toBe(false);fireEvent.click(within(legend).getByText('轉乘路線圖例'));expect(legend.open).toBe(true);
+  const legend=document.querySelector('.tra-combined-legend');
+  expect(legend.open).toBe(false);fireEvent.click(within(legend).getByText('路線圖例'));expect(legend.open).toBe(true);
   expect(within(legend).getByText('G 松山新店線')).toBeTruthy();
 });
 
@@ -424,9 +531,9 @@ it('TRA transfer labels show full metro names and requested regional naming',()=
   for(const name of ['G 松山新店線','R 淡水信義線','BL 板南線','桃園機場捷運','台中捷運綠線','紅線(岡山車站-小港)','輕軌'])expect(names).toContain(name);
   expect(names).not.toContain('A');expect(names).not.toContain('G');expect(names).not.toContain('高雄捷運紅線');
   expect(new Set([...map.querySelectorAll('[data-route-color]')].map(e=>e.getAttribute('stroke'))).size).toBeGreaterThanOrEqual(16);
-  fireEvent.change(screen.getByLabelText('路網範圍'),{target:{value:'tr-north'}});
-  const transfers=screen.getByLabelText('各站轉乘路線');
-  expect(within(transfers).getByRole('button',{name:'G 松山新店線'})).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('路網範圍'),{target:{value:'west'}});
+  const transfers=document.querySelector('[data-station="台北"]');
+  expect(within(document.querySelector('[data-station="松山"]')).getByRole('button',{name:'G 松山新店線'})).toBeTruthy();
   expect(within(transfers).getByRole('button',{name:'桃園機場捷運'})).toBeTruthy();
 });
 
@@ -445,4 +552,20 @@ it('TRA transfer rings cover all transfer types and retain endpoint radius',()=>
   }
   for(const name of ['六家','沙崙'])expect(document.querySelector(`[data-station="${name}"] .tra-station-ring`).getAttribute('r')).toBe('10');
   expect(document.querySelector('[data-station="基隆"] .tra-transfer-center')).toBeNull();
+});
+it('airport single route separates local and eight express stops without adding quiz stations',()=>{
+ const group=routeGroups(networks.find(n=>n.id==='north')).find(g=>g.id==='a');
+ const {container,rerender}=render(<RouteDiagram group={group} networkId="north" subtitle={false} onSelect={()=>{}}/>);
+ expect([...container.querySelectorAll('[data-express-stop]')].map(n=>n.dataset.expressStop)).toEqual(['台北車站','新北產業園區','長庚醫院','機場第一航廈','機場第二航廈','機場第三航廈','高鐵桃園站','環北']);
+ expect(container.querySelector('.airport-express-track>path').getAttribute('stroke')).toBe('#8254a2');
+ expect(container.querySelector('[data-line-id="a"]').getAttribute('stroke')).toBe('#427AB3');
+ expect(container.querySelector('.station-transfers').getAttribute('aria-label')).toContain('台鐵、高鐵');
+ expect(container.querySelector('.route-emblem').style.background).toBe('rgb(130, 84, 162)');
+ expect([...container.querySelectorAll('[data-express-section="extension"]')].map(p=>p.getAttribute('stroke-width'))).toEqual(['3','3','3']);
+ expect(container.querySelector('[data-express-future] circle').getAttribute('stroke')).toBe('#A8ADB5');
+ const count=container.querySelectorAll('.diagram-stop').length;
+ rerender(<RouteDiagram group={group} networkId="north" subtitle={false} game={{status:'running',mode:'fill',answers:{}}} onSelect={()=>{}}/>);
+ expect(container.querySelectorAll('.diagram-stop')).toHaveLength(count);
+ expect(container.querySelector('[data-express-stop]')).toBeNull();
+ expect(container.querySelector('.strip-station-name')).toBeNull();
 });

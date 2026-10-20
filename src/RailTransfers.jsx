@@ -27,7 +27,8 @@ export function RailTransferChip({label,code}){
     {open&&<span id={id} role="tooltip" className="rail-transfer-tooltip">{label}</span>}
   </span>;
 }
-export function RailTransferLegend({network}){
+export function RailTransferLegend({network,inline=false}){
   const labels=[...new Set(stationsFor(network).flatMap(station=>transferOptions(network,station)))].filter(label=>metroCodes[label]||['台鐵','高鐵'].includes(label));
-  return <details className="rail-transfer-legend"><summary>轉乘路線圖例</summary><div>{labels.map(label=><div key={label}><RailTransferChip label={label}/></div>)}</div></details>;
+  const content=<div>{labels.map(label=><div key={label}><RailTransferChip label={label}/></div>)}</div>;
+  return inline?content:<details className="rail-transfer-legend"><summary>轉乘路線圖例</summary>{content}</details>;
 }

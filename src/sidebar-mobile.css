@@ -1,0 +1,12 @@
+.menu-backdrop{display:none}
+@media(max-width:999px){.menu-backdrop{display:block;position:fixed;inset:72px 0 0;z-index:39;border:0;border-radius:0;background:#193c2625;cursor:default}}
+@media(max-width:640px){.menu-backdrop{top:64px}}
+@media(max-width:640px){
+ .route-sticky-tools{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:end;gap:10px}
+ .route-sticky-tools>label{width:auto;min-width:0}
+ .route-sticky-tools .map-toolbar-slot{grid-column:1/-1;width:100%;min-width:0;overflow:hidden}
+ .map-toolbar-slot .atlas-toolbar{display:block!important;width:100%;min-width:0}
+ .map-toolbar-slot .atlas-controls{display:flex;width:100%;min-width:0;max-width:100%!important;flex-shrink:1;flex-wrap:wrap!important;justify-content:flex-start;gap:5px}
+ .map-toolbar-slot .atlas-controls button{min-width:30px}
+ .map-toolbar-slot .atlas-controls .atlas-fit{padding:0 7px}
+}

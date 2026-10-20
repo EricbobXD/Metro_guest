@@ -4,7 +4,7 @@ import { buildNorthMap } from './north-map-model.js';
 import { northMapContents, northLegendContents } from './north-map-svg.js';
 
 export default function NorthRelativeMap({toolbarHost}){
-  const model=useMemo(()=>buildNorthMap(),[]),artwork=useMemo(()=>northMapContents(model,{includeHeader:false}),[model]);
+  const model=useMemo(()=>buildNorthMap(),[]),artwork=useMemo(()=>northMapContents(model,{includeHeader:false,includeSource:false}),[model]);
   const overview={x:model.width/2,y:model.height/2,zoom:1};
   const center=model.byId.get('台北車站');
   const reading={x:center.x+195,y:center.y+60,zoom:4.5};

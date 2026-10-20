@@ -60,7 +60,7 @@ export function northRouteTrackPath(route,points=route.pathPoints){if(route.id==
 
 export function northLegendContents(model=buildNorthMap()){const markup=header(model);return markup.slice(markup.indexOf('<g data-map-legend'));}
 
-export function northMapContents(model=buildNorthMap(),{includeHeader=true}={}){
+export function northMapContents(model=buildNorthMap(),{includeHeader=true,includeSource=true}={}){
   const masks=model.full?'':model.routes.map(route=>{
     const crossings=model.crossings.filter(c=>c.under.route===route.id);
     return crossings.length?`<mask id="crossing-${route.id}" maskUnits="userSpaceOnUse" x="0" y="0" width="${model.width}" height="${model.height}"><rect width="${model.width}" height="${model.height}" fill="white"/>${crossings.map(c=>`<circle cx="${num(c.x)}" cy="${num(c.y)}" r="${c.gap}" fill="black"/>`).join('')}</mask>`:'';
@@ -99,8 +99,8 @@ export function northMapContents(model=buildNorthMap(),{includeHeader=true}={}){
   return `<defs>${masks}</defs><rect width="${model.width}" height="${model.height}" fill="white"/>
   <g font-family="'Noto Sans TC','Microsoft JhengHei',sans-serif" fill="#182838">${includeHeader?header(model):''}
   <g data-map-tracks="true">${tracks}</g><g data-map-walks="true">${walks}</g><g data-map-leaders="true">${leaders}</g><g data-map-stations="true">${nodes}</g><g data-map-labels="true">${labels}${southNotice}</g>
-  <g data-map-source="true"><rect x="130" y="${model.height-155}" width="${model.width-260}" height="145" fill="white"/><line x1="180" y1="${model.height-138}" x2="${model.width-180}" y2="${model.height-138}" stroke="#D3DCE4" stroke-width="2"/>
-  <text x="180" y="${model.height-90}" font-size="30" font-weight="600">${xml(model.source)}</text><text x="180" y="${model.height-40}" font-size="29" font-weight="750">${xml(model.notice)}</text><text x="430" y="${model.height-40}" font-size="25" fill="#526171">線形依指定相對方位重排・示意不按地理比例</text></g></g>`;
+  ${includeSource?`<g data-map-source="true"><rect x="130" y="${model.height-155}" width="${model.width-260}" height="145" fill="white"/><line x1="180" y1="${model.height-138}" x2="${model.width-180}" y2="${model.height-138}" stroke="#D3DCE4" stroke-width="2"/>
+  <text x="180" y="${model.height-90}" font-size="30" font-weight="600">${xml(model.source)}</text><text x="180" y="${model.height-40}" font-size="29" font-weight="750">${xml(model.notice)}</text><text x="430" y="${model.height-40}" font-size="25" fill="#526171">線形依指定相對方位重排・示意不按地理比例</text></g>`:''}</g>`;
 }
 
 export function createNorthSvg(model=buildNorthMap()){

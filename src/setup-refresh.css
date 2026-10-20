@@ -1,0 +1,20 @@
+/* Compact departure card and secondary sidebar information. */
+.sidebar-info{border-top:1px solid #e3e9e0;margin-top:22px;padding-top:12px}
+.sidebar-info details{margin:4px 0}
+.site-sidebar .sidebar-info summary{padding:13px 12px;color:#526b5d;cursor:pointer;font-size:13px;font-weight:600;border-radius:8px}
+.sidebar-info summary:hover{background:#f0f5eb}
+.site-sidebar .sidebar-info details>div{position:static;width:auto;min-width:0;box-shadow:none;border:0;padding:5px 12px 14px;background:none;font-size:12px;line-height:1.75;color:#526b5d}
+.sidebar-info p{margin:8px 0}.sidebar-info strong{font-size:12px}.sidebar-info a{color:#27644c;text-underline-offset:3px}
+.setup-screen .practice-section{max-width:780px;margin-top:32px;border-radius:22px;box-shadow:0 14px 42px #254e3610}
+.setup-screen .setup-controls{padding:30px 32px 0;border-radius:22px 22px 0 0;background:linear-gradient(120deg,#edf5ea 0%,#fff 72%);border-color:#d7e4d5}
+.setup-controls>.setup-heading{display:block;margin-bottom:28px;border-left:4px solid #357653;padding-left:16px}
+.setup-heading .setup-kicker{font-size:10px;font-weight:700;letter-spacing:2px;color:#60816b}
+.setup-controls .setup-heading h1{font-size:30px;margin:6px 0 8px;letter-spacing:1px;color:#234f3a}
+.setup-heading p{font-size:13px;color:#5a7262;margin:0}
+.setup-controls>.setup-fields{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.setup-screen .settings{padding:24px 32px 30px;border-radius:0 0 22px 22px;border-color:#d7e4d5}
+.setup-screen select{background-color:#f8faf6;border-color:#d7e2d5;border-radius:10px;min-height:46px}
+.setup-screen select:focus{outline:2px solid #458467;outline-offset:2px}
+.setup-screen .settings>.primary-button{border-radius:12px;min-height:50px;box-shadow:0 6px 14px #265d3822;font-size:14px}
+.setup-screen .settings>.primary-button:hover{transform:translateY(-1px)}
+@media(max-width:640px){.setup-screen .practice-section{margin-top:18px}.setup-screen .setup-controls{padding:24px 20px 0}.setup-screen .settings{padding:22px 20px 24px}.setup-controls>.setup-fields{grid-template-columns:1fr;gap:16px}.setup-controls .setup-heading h1{font-size:26px}}
