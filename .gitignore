@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.log
+/.tmp*
+/*.png
+/*.jpg
+/original-display.html
+.env
+.env.*
+!.env.example

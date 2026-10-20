@@ -1,0 +1,165 @@
+{
+  "checks": [
+    {
+      "comment": 1,
+      "description": "象山終段與前方等距",
+      "pass": true,
+      "evidence": 178
+    },
+    {
+      "comment": 2,
+      "description": "南港名稱置中，名稱及轉乘下移",
+      "pass": true
+    },
+    {
+      "comment": 3,
+      "description": "BL19—BL21 縮短",
+      "pass": true
+    },
+    {
+      "comment": 4,
+      "description": "西門站體上移",
+      "pass": true,
+      "evidence": {
+        "before": 2701.941336,
+        "after": 2625
+      }
+    },
+    {
+      "comment": 5,
+      "description": "BL08—BL09 加長",
+      "pass": true,
+      "evidence": {
+        "before": 162.18490905653587,
+        "after": 260.0699503848834
+      }
+    },
+    {
+      "comment": 6,
+      "description": "龍山寺站體上移",
+      "pass": true
+    },
+    {
+      "comment": 7,
+      "description": "共享站名位於 A03 上方",
+      "pass": true
+    },
+    {
+      "comment": 8,
+      "description": "A03 與 A02 同高",
+      "pass": true
+    },
+    {
+      "comment": 9,
+      "description": "A02 左右中點水平接線",
+      "pass": true
+    },
+    {
+      "comment": 10,
+      "description": "移除機捷三重重複站名",
+      "pass": true
+    },
+    {
+      "comment": 11,
+      "description": "頂埔字樣上移",
+      "pass": true
+    },
+    {
+      "comment": 12,
+      "description": "A15—A23 縮短",
+      "pass": true,
+      "evidence": {
+        "before": 1620.3487650000002,
+        "after": 959.9547750000002
+      }
+    },
+    {
+      "comment": 13,
+      "description": "圖示小碧潭支線改黃綠",
+      "pass": true
+    },
+    {
+      "comment": 14,
+      "description": "Y11—Y10 加長",
+      "pass": true
+    },
+    {
+      "comment": 15,
+      "description": "Y08—Y07 縮短",
+      "pass": true
+    },
+    {
+      "comment": 16,
+      "description": "台北車站機捷提示列於鐵路提示下方",
+      "pass": true
+    },
+    {
+      "comment": 17,
+      "description": "指定四段同步縮短",
+      "pass": true,
+      "evidence": [
+        {
+          "from": "民權西路",
+          "to": "中山國小",
+          "before": 273.9197549999999,
+          "after": 220
+        },
+        {
+          "from": "中山",
+          "to": "松江南京",
+          "before": 381.83031600000004,
+          "after": 300
+        },
+        {
+          "from": "台北車站",
+          "to": "忠孝新生",
+          "before": 381.83031600000004,
+          "after": 300
+        },
+        {
+          "from": "中正紀念堂",
+          "to": "東門",
+          "before": 381.83031600000004,
+          "after": 300
+        }
+      ]
+    },
+    {
+      "comment": 18,
+      "description": "BR11—BR14 加長",
+      "pass": true
+    },
+    {
+      "comment": 19,
+      "description": "淡海所有分支同主線色",
+      "pass": true
+    },
+    {
+      "comment": 20,
+      "description": "O14—O21 近似等距並保留 BL/Y 軸向",
+      "pass": true,
+      "evidence": [
+        220.00013878944753,
+        219.96843353559268,
+        219.9685028320574,
+        219.9997265461941,
+        219.99979442844543,
+        219.99986301780262,
+        219.99993090005395
+      ]
+    }
+  ],
+  "passed": 20,
+  "total": 20,
+  "labelCount": 178,
+  "labelOverlaps": [],
+  "topology": {
+    "stations": 181,
+    "codes": 195,
+    "walks": 8
+  },
+  "deformation": {
+    "BL": 172.67112765757804,
+    "Y": 72.08848354292579
+  }
+}
