@@ -205,13 +205,13 @@ export function placeNorthLabels(model) {
 
 function placeFullNorthLabels(model){
   const boxes=model.stations.map(s=>({x:s.x+(s.marker.dx||0)-s.marker.w/2-3,y:s.y-s.marker.h/2-3,w:s.marker.w+6,h:s.marker.h+6}));
-  const reserved=[{x:3500,y:230,w:1150,h:960},{x:130,y:model.height-155,w:model.width-260,h:155}];
+  const reserved=model.compactLayout?[]:[{x:3500,y:230,w:1150,h:960},{x:130,y:model.height-155,w:model.width-260,h:155}];
   const pending=model.stations.filter(s=>!['十四張〔K〕','新北產業園區','紅樹林〔V〕','三重〔A〕'].includes(s.id)).map(station=>({...station,stationIds:station.id==='紅樹林'?['紅樹林','紅樹林〔V〕']:station.id==='新北產業園區〔A〕'?['新北產業園區〔A〕','新北產業園區']:[station.id],...northLabelLane(station)}))
     .sort((a,b)=>Number(b.interchange)-Number(a.interchange)||northLabelSize(b).w-northLabelSize(a).w);
   const labels=[];
   for(const station of pending){
     const candidates=[];
-    for(const extra of [0,4,8,14,22,32])for(const shift of [0,-10,10,-20,20,-30,30,-40,40,-60,60,-80,80]){
+    for(const extra of (model.compactLayout?[0,4,8,14,22,32,44,60]:[0,4,8,14,22,32]))for(const shift of (model.compactLayout?[0,-10,10,-20,20,-30,30,-40,40,-60,60,-80,80,-100,100,-120,120]:[0,-10,10,-20,20,-30,30,-40,40,-60,60,-80,80])){
       const horizontal=station.side==='left'||station.side==='right';
       const gap=(horizontal?station.marker.w/2+8:station.marker.h/2+8)+extra;
       const box=northLabelBox(station,station.side,gap,shift);

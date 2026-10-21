@@ -155,7 +155,7 @@ export function mapTransfers(network,station,lineId){
   return [...new Set([...transferOptions(network,station).filter(label=>label!==own),...branchTransfers(network,station)])];
 }
 // Explicit walk connections: preserve both station names during route answering.
-export const walkConnections = { north: [['動物園', '動物園:纜車'], ['新埔', '新埔民生'], ['北門', '台北車站:機捷']], kaohsiung: [['凱旋','前鎮之星'], ['凹子底','愛河之心'], ['苓雅運動園區','凱旋公園']] };
+export const walkConnections = { north: [['動物園', '動物園:纜車'], ['新埔', '新埔民生'], ['北門', '台北車站:機捷']], kaohsiung: [['凱旋','前鎮之星'], ['凹子底','愛河之心']] };
 
 export function buildGraph(network) {
   const graph = new Map(stationsFor(network).map(s => [s.id, new Set()]));
@@ -202,7 +202,7 @@ export function transferOptions(network, station) {
   if (network.id === 'hsr') return hsrTransfers[station.id] || [];
   const labels = [...new Set(station.lines.map(transferLabel))];
   const extra = externalTransfers[network.id]?.[station.id] || [];
-  const walking = network.id === 'north' ? { '新埔': ['環狀線'], '新埔民生': ['板南線'], '北門': ['桃園機場捷運'], '台北車站:機捷': ['桃園機場捷運'], '動物園': ['貓空纜車'], '動物園:纜車': ['文湖線'] }[station.id] || [] : network.id === 'kaohsiung' ? { '凱旋':['環狀輕軌'], '前鎮之星':['紅線'], '凹子底':['環狀輕軌'], '愛河之心':['紅線'], '苓雅運動園區':['環狀輕軌'], '凱旋公園':['橘線'] }[station.id] || [] : [];
+  const walking = network.id === 'north' ? { '新埔': ['環狀線'], '新埔民生': ['板南線'], '北門': ['桃園機場捷運'], '台北車站:機捷': ['桃園機場捷運'], '動物園': ['貓空纜車'], '動物園:纜車': ['文湖線'] }[station.id] || [] : network.id === 'kaohsiung' ? { '凱旋':['環狀輕軌'], '前鎮之星':['紅線'], '凹子底':['環狀輕軌'], '愛河之心':['紅線'] }[station.id] || [] : [];
   if (labels.length < 2 && !extra.length && !walking.length) return [];
   return [...new Set([...labels, ...extra, ...walking])];
 }

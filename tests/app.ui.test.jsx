@@ -1,6 +1,8 @@
+import {buildNorthMap} from '../src/north-map-model.js';
 import {RailTransferChip} from '../src/RailTransfers.jsx';
 import TraOverview from '../src/TraOverview.jsx';
 import SchematicMap from '../src/SchematicMap.jsx';
+import {makeSchematic} from '../src/schematic.js';
 import {singleRouteDisplayGroup} from '../src/single-route-service.js';
 import RouteDiagram from '../src/RouteDiagram.jsx';
 import {networks,routeGroups} from '../src/data.js';
@@ -568,4 +570,44 @@ it('airport single route separates local and eight express stops without adding 
  expect(container.querySelectorAll('.diagram-stop')).toHaveLength(count);
  expect(container.querySelector('[data-express-stop]')).toBeNull();
  expect(container.querySelector('.strip-station-name')).toBeNull();
+});
+it('segmented mode and time controls update the challenge configuration',()=>{
+ render(<App/>);
+ fireEvent.click(within(screen.getByRole('group',{name:'選擇挑戰模式'})).getByRole('button',{name:'轉乘資訊挑戰'}));
+ expect(screen.getByLabelText('挑戰模式').value).toBe('transfer');
+ fireEvent.click(within(screen.getByRole('group',{name:'選擇挑戰時間'})).getByRole('button',{name:'25 分鐘'}));
+ expect(screen.getByLabelText('挑戰時間').value).toBe('1500');
+});
+it('Kaohsiung opens on the main network with a collapsed external legend and fixed compass',()=>{
+ const {container}=render(<SchematicMap network={networks.find(n=>n.id==='kaohsiung')} subtitle={true} onSelect={()=>{}}/>);
+ const canvas=container.querySelector('.atlas-canvas'),svg=canvas.querySelector('svg'),legend=container.querySelector('.regional-independent-legend');
+ expect(legend.open).toBe(false);expect(svg.querySelector('.atlas-map-key')).toBeNull();
+ expect(svg.querySelector('.regional-map-heading')).toBeNull();expect(svg.querySelector('rect[stroke="#cdd3df"]')).toBeNull();
+ expect(screen.getByRole('button',{name:'主要路網',exact:true}).getAttribute('aria-pressed')).toBe('true');
+ expect(canvas.querySelector('.fixed-map-compass')).toBeTruthy();
+ const main=svg.getAttribute('viewBox');
+ const [x,y,w,h]=main.split(' ').map(Number),model=makeSchematic(networks.find(n=>n.id==='kaohsiung'),true);
+ for(const node of model.nodes.filter(n=>n.lines.some(l=>l.id==='kh-c'))){expect(node.x).toBeGreaterThanOrEqual(x);expect(node.x).toBeLessThanOrEqual(x+w);expect(node.y).toBeGreaterThanOrEqual(y);expect(node.y).toBeLessThanOrEqual(y+h);}
+ fireEvent.click(screen.getByRole('button',{name:'全圖',exact:true}));
+ const full=svg.getAttribute('viewBox');expect(main).not.toBe(full);
+ expect(screen.getByRole('button',{name:'全圖',exact:true}).getAttribute('aria-pressed')).toBe('true');
+ fireEvent.click(screen.getByRole('button',{name:'主要路網',exact:true}));expect(svg.getAttribute('viewBox')).toBe(main);
+ fireEvent.click(screen.getByRole('button',{name:'圖例',exact:true}));expect(legend.open).toBe(true);
+ expect(svg.getAttribute('viewBox')).toBe(main);
+});
+
+it('Taichung fits all 18 station labels with an fixed in-map legend and corner compass',()=>{
+ const network=networks.find(n=>n.id==='taichung'),{container}=render(<SchematicMap network={network} subtitle={true} onSelect={()=>{}}/>);
+ const canvas=container.querySelector('.atlas-canvas'),svg=canvas.querySelector('svg'),legend=container.querySelector('.taichung-fixed-legend');
+ expect(legend).toBeTruthy();expect(svg.querySelector('.atlas-map-key')).toBeNull();expect(svg.querySelector('.regional-map-heading')).toBeNull();expect(svg.querySelector('rect[stroke="#cdd3df"]')).toBeNull();expect(canvas.querySelector('.fixed-map-compass')).toBeTruthy();
+ const box=svg.getAttribute('viewBox'),[x,y,w,h]=box.split(' ').map(Number),model=makeSchematic(network,true);expect(model.nodes).toHaveLength(18);
+ for(const n of model.nodes){expect(n.label.x).toBeGreaterThanOrEqual(x);expect(n.label.y).toBeGreaterThanOrEqual(y);expect(n.label.x+n.label.w).toBeLessThanOrEqual(x+w);expect(n.label.y+n.label.h).toBeLessThanOrEqual(y+h);}
+ const legendBox=legend.querySelector('svg').getAttribute('viewBox');fireEvent.click(screen.getByRole('button',{name:'放大路網',exact:true}));expect(legend.querySelector('svg').getAttribute('viewBox')).toBe(legendBox);expect(legend.closest('.atlas-canvas')).toBe(canvas);
+});
+
+
+it('north uses only the adopted 14 percent map with no trial controls',()=>{
+ const {container}=render(<SchematicMap network={networks.find(n=>n.id==='north')} subtitle={true} onSelect={()=>{}}/>);
+ expect(screen.queryByRole('button',{name:'緊湊版比較'})).toBeNull();expect(screen.queryByRole('button',{name:'可讀版比較'})).toBeNull();expect(container.querySelector('.north-readable-overview')).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'全圖',exact:true}));expect(screen.getByRole('group',{name:'雙北＋桃園整合簡易路網圖'}).getAttribute('viewBox')).toBe('0 0 4773 4257');
 });

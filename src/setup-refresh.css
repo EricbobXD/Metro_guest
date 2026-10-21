@@ -18,3 +18,39 @@
 .setup-screen .settings>.primary-button{border-radius:12px;min-height:50px;box-shadow:0 6px 14px #265d3822;font-size:14px}
 .setup-screen .settings>.primary-button:hover{transform:translateY(-1px)}
 @media(max-width:640px){.setup-screen .practice-section{margin-top:18px}.setup-screen .setup-controls{padding:24px 20px 0}.setup-screen .settings{padding:22px 20px 24px}.setup-controls>.setup-fields{grid-template-columns:1fr;gap:16px}.setup-controls .setup-heading h1{font-size:26px}}
+.segmented-native{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:0!important;clip-path:inset(50%);overflow:hidden;white-space:nowrap}
+.segmented-control{display:flex;gap:4px;border:1px solid #d6e2d3;background:#edf2e9;padding:4px;border-radius:11px;margin-top:8px;min-height:46px}
+.segmented-control button{flex:1;min-width:0;border:0;border-radius:8px;background:transparent;color:#526d59;font:inherit;font-size:12px;padding:9px 5px;cursor:pointer;transition:background .18s,box-shadow .18s,color .18s}
+.segmented-control button[aria-pressed=true]{background:#2c694c;color:white;box-shadow:0 2px 6px #234f3a24}
+.segmented-control button:disabled{opacity:.4;cursor:not-allowed}
+.segmented-control button:focus-visible{outline:2px solid #2c694c;outline-offset:2px}
+.segmented-native:focus-visible+.segmented-control{outline:2px solid #2c694c;outline-offset:2px}
+.app{min-height:100dvh;display:flex;flex-direction:column}
+.app>main{flex:1;width:100%;box-sizing:border-box}
+.app>.site-footer{margin-top:36px;margin-bottom:0;flex-shrink:0}
+.taichung-atlas .atlas-canvas{height:max(900px,110dvh);max-height:none}
+.taichung-atlas .atlas-canvas svg{height:100%;touch-action:none;cursor:grab}
+.taichung-atlas .atlas-canvas svg:active{cursor:grabbing}
+@media(max-width:640px){.setup-controls>.setup-fields{grid-template-columns:1fr}.taichung-atlas .atlas-canvas{height:900px}.segmented-control button{font-size:11px}.app>.site-footer{margin-top:24px}}
+.menu-visible>main{width:calc(100% - 224px)}
+@media(max-width:899px){.menu-visible>main{width:100%}}
+.kaohsiung-atlas .atlas-canvas{height:clamp(1000px,130dvh,1500px);position:relative;max-height:none}
+.fixed-map-compass{position:absolute;top:16px;right:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#ffffffed;border:1px solid #d9e2da;border-radius:50%;width:40px;height:40px;color:#40594b;font-size:24px;line-height:20px;pointer-events:none;box-shadow:0 2px 6px #2035280a}
+.fixed-map-compass span{font-size:9px;line-height:11px;font-weight:700}
+.regional-independent-legend{border-top:1px solid #dce5da;background:white;padding:14px 20px}
+.regional-independent-legend summary{cursor:pointer;font-size:13px;color:#375b45;font-weight:600}
+.regional-independent-legend>svg{display:block;width:100%;max-width:1000px;height:auto;margin:14px auto 0}
+.kaohsiung-atlas.atlas-expanded .atlas-canvas{height:auto;min-height:0;flex:1}
+.kaohsiung-atlas.atlas-expanded .regional-independent-legend[open]{max-height:35dvh;overflow:auto}
+@media(max-width:640px){.kaohsiung-atlas .atlas-canvas{height:1050px}.fixed-map-compass{width:34px;height:34px;top:10px;right:10px}.regional-independent-legend{padding:14px}}
+.kaohsiung-atlas .atlas-controls button[aria-pressed=true],.route-sticky-tools:has(+.route-map .kaohsiung-atlas) .atlas-controls button[aria-pressed=true]{background:#2c694c;color:white;border-color:#2c694c}
+.route-sticky-tools .map-toolbar-slot .atlas-controls button[aria-pressed=true]{background:#2c694c!important;color:white!important;border-color:#2c694c!important;box-shadow:0 0 0 1px #2c694c}
+
+.kaohsiung-atlas .atlas-label-leader{stroke-dasharray:none;stroke-width:1.5}
+
+.taichung-atlas .atlas-canvas{position:relative;height:clamp(560px,calc(100dvh - 210px),800px);max-height:none}
+@media(max-width:640px){.taichung-atlas .atlas-canvas{height:calc(100dvh - 210px);min-height:460px}}
+.taichung-atlas.atlas-expanded .atlas-canvas{height:auto;flex:1;min-height:0}
+
+.taichung-fixed-legend{position:absolute;top:20px;left:20px;width:360px;height:187.2px;pointer-events:none;z-index:2}
+.taichung-fixed-legend svg{display:block;width:360px;height:187.2px}

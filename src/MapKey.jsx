@@ -10,17 +10,17 @@ const endpoints={
   v:'紅樹林＝濱海沙崙',k:'雙城＝十四張',
 };
 
-export default function MapKey({map}){
+export default function MapKey({map,showCompass=true}){
   if(!map.legend)return null;
   const {x,y,scale=1}=map.legend,w=map.legend.w/scale,h=map.legend.h/scale;
   const groups=map.groups.filter(group=>endpoints[group.id]);
   return <g className="atlas-map-key" transform={`translate(${x},${y}) scale(${scale})`} aria-hidden="true">
-    <g className="map-north-arrow" transform="translate(-430,510)">
+    {showCompass&&<g className="map-north-arrow" transform={`translate(${map.legend.compassX??-430},${map.legend.compassY??510})`}>
       <circle r="63" fill="white" stroke="#172332" strokeWidth="3"/>
       <path d="M0 -50 L-22 40 L0 22 L22 40 Z" fill="#172332"/>
       <path d="M0 -50 V22 L22 40 Z" fill="white" stroke="#172332" strokeWidth="2"/>
       <text y="-85" textAnchor="middle" className="map-key-title">N</text>
-    </g>
+    </g>}
     <rect width={w} height={h} rx="12" fill="white" stroke="#D3DCE4" strokeWidth="3"/>
     <text x="48" y="72" className="map-key-title">路線圖例</text>
     <text x={w-48} y="72" textAnchor="end" className="map-key-en">ROUTE ENDPOINTS</text>

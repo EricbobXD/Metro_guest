@@ -9,7 +9,7 @@ for(const network of networks.filter(n=>!['tra','hsr'].includes(n.id))){
   for(const aspect of [.7,1.5,2]){
    const frame=challengeMapFrame(bounds,aspect);
    const view=constrainChallengeView({zoom:1,x:100000,y:-100000},bounds,frame,map);
-   assert.equal(view.x+map.width/2,bounds.x);assert.equal(view.y+map.height/2,bounds.y);
+   assert.ok(Math.abs(view.x+map.width/2-bounds.x)<1e-8);assert.ok(Math.abs(view.y+map.height/2-bounds.y)<1e-8);
    for(const node of map.nodes){assert.ok(node.x>=bounds.x-frame.width/2&&node.x<=bounds.x+frame.width/2);assert.ok(node.y>=bounds.y-frame.height/2&&node.y<=bounds.y+frame.height/2);}
    const zoomed=constrainChallengeView({zoom:4,x:100000,y:-100000},bounds,frame,map);
    assert.ok(zoomed.x+map.width/2<=bounds.right);assert.ok(zoomed.y+map.height/2>=bounds.top);

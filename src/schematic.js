@@ -68,6 +68,8 @@ function labelSide(network,node){
     return code>=110&&code<=115?'left':'right';
   }
   if(network==='kaohsiung'){
+    if(['愛河之心','前鎮之星'].includes(node.id))return 'left';
+    if(['凹子底','凱旋'].includes(node.id))return 'right';
     if(line==='kh-r')return 'right';
     if(line==='kh-o')return 'below';
     if(code<=7||code>=34)return 'below';
@@ -138,27 +140,50 @@ export function makeSchematic(network,subtitle=false){
   const lines=network.lines.map(line=>{
     const coordinates=line.stops.map(raw=>points.get(stationId(network.id,line.id,raw))),bends={};
     for(const [edge,positions] of Object.entries(layout.bends?.[line.id]||{}))bends[edge]=positions.map(([x,y])=>({x:(x+offsetX)*scale,y:(y+offsetY)*scale,corner:true}));
+    const ring=layout.rings?.[line.id];
+    if(ring){const vertices=ring.vertices.map(([x,y])=>({x:(x+offsetX)*scale,y:(y+offsetY)*scale}));return {...line,color:diagramColor(line),points:coordinates,angularRing:true,path:'M'+vertices.map(p=>p.x+','+p.y).join(' L')+' Z',vertices};}
     return {...line,color:diagramColor(line),points:coordinates,vertices:railVertices(coordinates,line.loop,bends)};
   });
   const edges=lines.flatMap(line=>{const p=line.loop?[...line.vertices,line.vertices[0]]:line.vertices;return p.slice(1).map((b,i)=>[p[i],b]);});
   if(network.id==='kaohsiung')for(const [from,to]of walkConnections.kaohsiung){const a=nodes.find(n=>n.id===from),b=nodes.find(n=>n.id===to);if(a&&b)edges.push([a,b]);}
-  const circles=nodes.map(n=>({x:n.x-n.marker.w/2-4,y:n.y-26,w:n.marker.w+8,h:52})),labels=legend?[{...legend}]:[];
-  [...nodes].sort((a,b)=>b.transfers.length-a.transfers.length).forEach(node=>{
-    const [name,sub]=node.raw.split('|'),side=labelSide(network.id,node),rows=network.id==='north'?nameRows(name,side):[name],subRows=subtitle&&sub?(network.id==='north'?nameRows(sub,'below'):[sub]):[],measure=(text,size)=>[...text].reduce((sum,char)=>sum+(/[\u3400-\u9fff]/.test(char)?size:size*.56),0),external=node.codeItems.filter(item=>item.external),extraWidth=external.reduce((sum,item)=>sum+item.width+5,0),w=Math.max(...rows.map(row=>measure(row,30)),extraWidth,...subRows.map(row=>measure(row,21)))+10+(network.id==='kaohsiung'&&node.id==='高雄國際機場'?36:0),h=rows.length*34+subRows.length*25+(external.length?25:0),candidates=[];
+  const circles=nodes.map(n=>({x:n.x-n.marker.w/2-4,y:n.y-26,w:n.marker.w+8,h:52})),labels=legend&&!['kaohsiung','taichung'].includes(network.id)?[{...legend}]:[];
+  if(network.id==='kaohsiung')for(const id of ['凹子底','凱旋']){const n=nodes.find(n=>n.id===id);circles.push({x:n.x-53,y:n.y-34,w:106,h:68});}
+  const pairNames=['凹子底','愛河之心','凱旋','前鎮之星'];
+  const lowerNames=['高雄展覽館','經貿園區','軟體園區','夢時代','籬仔內','輕軌機廠','凱旋二聖'];
+  const eastNames=['科工館','聖功醫院','凱旋公園','衛生局','五權國小','凱旋武昌'];
+  const closeNames=['聯合醫院','龍華國小'];
+  const westNames=['旅運中心','光榮碼頭','哈瑪星','駁二蓬萊','駁二大義','真愛碼頭','壽山公園','文武聖殿','鼓山區公所','鼓山','馬卡道'];
+  const labelPriority=n=>pairNames.includes(n.id)?1000:closeNames.includes(n.id)||n.id==='凱旋公園'?900:n.id==='凱旋中華'?875:westNames.includes(n.id)?850:lowerNames.includes(n.id)?800:n.transfers.length*10;
+  const ring=layout.rings?.['kh-c'];
+  const outwardSide=node=>{if(network.id==='kaohsiung'&&node.id==='凱旋中華')return 'above';if(network.id==='kaohsiung'&&eastNames.includes(node.id))return 'right';if(network.id==='kaohsiung'&&westNames.includes(node.id))return 'left';if(network.id==='kaohsiung'&&lowerNames.includes(node.id))return 'below';if(network.id==='kaohsiung'&&closeNames.includes(node.id))return 'above';if(!ring||node.primaryLine!=='kh-c'||pairNames.includes(node.id))return labelSide(network.id,node);const nx=(node.x/scale-offsetX-ring.cx)/ring.rx,ny=(node.y/scale-offsetY-ring.cy)/ring.ry;return Math.abs(ny)>.5?(ny<0?'above':'below'):nx<0?'left':'right';};
+  [...nodes].sort((a,b)=>network.id==='kaohsiung'?labelPriority(b)-labelPriority(a)||(westNames.includes(a.id)&&westNames.includes(b.id)?a.y-b.y:lowerNames.includes(a.id)&&lowerNames.includes(b.id)?a.x-b.x:0):b.transfers.length-a.transfers.length).forEach(node=>{
+    const [name,sub]=node.raw.split('|'),side=network.id==='kaohsiung'?outwardSide(node):labelSide(network.id,node),rows=network.id==='north'?nameRows(name,side):[name],subRows=subtitle&&sub?(network.id==='north'?nameRows(sub,'below'):[sub]):[],measure=(text,size)=>[...text].reduce((sum,char)=>sum+(/[\u3400-\u9fff]/.test(char)?size:size*.56),0),external=node.codeItems.filter(item=>item.external),extraWidth=external.reduce((sum,item)=>sum+item.width+5,0)*(network.id==='taichung'?1.8:1),w=Math.max(...rows.map(row=>measure(row,30)),extraWidth,...subRows.map(row=>measure(row,21)))+10+(network.id==='kaohsiung'&&node.id==='高雄國際機場'?36:0),h=rows.length*34+subRows.length*25+(external.length?(network.id==='taichung'?45:25):0),candidates=[];
     const base=side==='left'||side==='right'?node.marker.w/2+12:34;
-    for(const placement of network.id==='north'||network.id==='taichung'&&node.id==='松竹'?[side]:[side,...['left','right','above','below'].filter(s=>s!==side)])for(const gap of (network.id==='north'?[base,base+12,base+28,base+50,base+80,base+120,base+175,base+240]:[base,base+12,base+28,base+50]))for(const shift of [0,-12,12,-24,24,-40,40,-64,64,-80,80,-112,112,-140,140]){
+    for(const placement of network.id==='north'||network.id==='taichung'&&node.id==='松竹'||network.id==='kaohsiung'&&(pairNames.includes(node.id)||westNames.includes(node.id)||eastNames.includes(node.id)||closeNames.includes(node.id)||lowerNames.includes(node.id))?[side]:[side,...['left','right','above','below'].filter(s=>s!==side)])for(const gap of (network.id==='north'?[base,base+12,base+28,base+50,base+80,base+120,base+175,base+240]:network.id==='kaohsiung'?[base,base+12,base+28,base+50,base+80,base+110]:[base,base+12,base+28,base+50]))for(const shift of (network.id==='kaohsiung'?[0,-12,12,-24,24,-40,40,-64,64,-80,80]:[0,-12,12,-24,24,-40,40,-64,64,-80,80,-112,112,-140,140])){
+      if(network.id==='kaohsiung'&&node.primaryLine==='kh-c'&&Number(node.codes[0].replace('C',''))>=3&&Number(node.codes[0].replace('C',''))<=14&&!pairNames.includes(node.id)&&Math.abs(shift)>24)continue;
       const offset=placement==='right'?{dx:gap,dy:-18+shift}:placement==='left'?{dx:-w-gap,dy:-18+shift}:placement==='above'?{dx:-w/2+shift,dy:-h-gap}:{dx:-w/2+shift,dy:gap};
       const box={x:node.x+offset.dx,y:node.y+offset.dy,w,h};
-      if(box.x<25||box.y<130||labels.some(label=>intersects(label,box)))continue;
+      if(box.x<25||box.y<130||labels.some(label=>intersects(label,network.id==='kaohsiung'?{x:box.x-6,y:box.y-6,w:box.w+12,h:box.h+12}:box)))continue;
       if(network.id!=='north'&&edges.some(([a,b])=>segmentHitsBox(a,b,{x:box.x-9,y:box.y-9,w:box.w+18,h:box.h+18})))continue;
       const distance=Math.hypot(Math.max(box.x,Math.min(node.x,box.x+w))-node.x,Math.max(box.y,Math.min(node.y,box.y+h))-node.y);
-      if(network.id!=='north'&&(distance>100||circles.some(b=>intersects(b,box))))continue;
-      candidates.push({...offset,placement,score:circles.filter(b=>intersects(b,box)).length*20000+edges.filter(([a,b])=>segmentHitsBox(a,b,box)).length*900+distance*60+Math.abs(shift)*2+(placement===side?0:300)});
+      if(network.id!=='north'&&(distance>(network.id==='kaohsiung'?125:100)||circles.some(b=>intersects(b,box))))continue;
+      if(network.id==='kaohsiung'&&node.primaryLine==='kh-c'&&Number(node.codes[0].replace('C',''))>=3&&Number(node.codes[0].replace('C',''))<=14&&distance>70)continue;
+      candidates.push({...offset,placement,score:circles.filter(b=>intersects(b,box)).length*20000+edges.filter(([a,b])=>segmentHitsBox(a,b,box)).length*900+distance*60+Math.abs(shift)*2+(placement===side?0:network.id==='kaohsiung'&&node.primaryLine==='kh-c'?2200:300)});
     }
     const best=candidates.sort((a,b)=>a.score-b.score)[0];
     if(!best)throw new Error(`No readable label position: ${node.id}`);
     node.label={x:node.x+best.dx,y:node.y+best.dy,w,h,side:best.placement,rows,subRows};labels.push({...node.label});
   });
-  const width=Math.max(legend?legend.x+legend.w:0,...nodes.map(n=>Math.max(n.x+n.marker.w/2,n.label.x+n.label.w)))+70,height=Math.max(...nodes.map(n=>Math.max(n.y+22,n.label.y+n.label.h)))+70;
-  return {nodes,lines,width,height,groups,legend};
+  const width=Math.max(legend&&!['kaohsiung','taichung'].includes(network.id)?legend.x+legend.w:0,...nodes.map(n=>Math.max(n.x+n.marker.w/2,n.label.x+n.label.w)))+70,height=Math.max(...nodes.map(n=>Math.max(n.y+22,n.label.y+n.label.h)))+70;
+  const crossings=[];
+  if(network.id==='kaohsiung'){
+    const green=lines.find(l=>l.id==='kh-c'),orange=lines.find(l=>l.id==='kh-o');
+    for(let i=0;i<green.vertices.length;i++)for(let j=1;j<orange.vertices.length;j++){
+      const a=green.vertices[i],b=green.vertices[(i+1)%green.vertices.length],c=orange.vertices[j-1],d=orange.vertices[j];
+      const ux=b.x-a.x,uy=b.y-a.y,vx=d.x-c.x,vy=d.y-c.y,den=ux*vy-uy*vx;if(Math.abs(den)<.001)continue;
+      const t=((c.x-a.x)*vy-(c.y-a.y)*vx)/den,u=((c.x-a.x)*uy-(c.y-a.y)*ux)/den;
+      if(t>=0&&t<=1&&u>=0&&u<=1){const p={x:a.x+t*ux,y:a.y+t*uy};if(!nodes.some(n=>n.interchange&&Math.hypot(n.x-p.x,n.y-p.y)<60))crossings.push(p);}
+    }
+  }
+  return {nodes,lines,width,height,groups,legend,crossings};
 }
