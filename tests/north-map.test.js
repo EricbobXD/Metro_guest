@@ -1,3 +1,4 @@
+import {buildNorthDisplayMap} from '../src/north-display-map.js';
 import {commentReference} from '../src/north-map-comment-reference.js';
 import {southHeightReference} from '../src/north-map-south-height-reference.js';
 import {southFixedTrack,southFixedSpacing} from '../src/north-map-south-fixed-track.js';
@@ -126,7 +127,7 @@ test('north: exact station labels occur once, use leaders and remain within squa
 });
 
 test('north: downloadable SVG matches the live artwork source',()=>{
-  assert.equal(readFileSync(new URL('../public/maps/north-relative.svg',import.meta.url),'utf8'),createNorthSvg());
+  assert.equal(readFileSync(new URL('../public/maps/north-relative.svg',import.meta.url),'utf8'),createNorthSvg(buildNorthDisplayMap(),{includeHeader:false,includeSource:false}));
 });
 
 const full=buildNorthMap(),fullDocument=new JSDOM(createNorthSvg(full),{contentType:'image/svg+xml'}).window.document;
